@@ -20,6 +20,12 @@ This is the public pack behind the Lift Off article [*I Gave 11 AI Agents My Tra
 | [templates/](templates/) | Blank `CONTRACT`, `ROSTER` and agent-card templates to adapt |
 | [docs/WHAT-BROKE.md](docs/WHAT-BROKE.md) | Six months of failures and the single pattern behind them |
 | [docs/BEYOND-TRADING.md](docs/BEYOND-TRADING.md) | The same design mapped to due diligence, procurement, underwriting and more |
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | How it's wired: system, planes, arm path, data model, setup lifecycle (Mermaid diagrams) |
+| [docs/CONNECTORS.md](docs/CONNECTORS.md) | Every MCP connector and data source, who uses it, and how far it's trusted |
+| [docs/CADENCE.md](docs/CADENCE.md) | Who runs when, from 03:35 PT to the weekend BUILD |
+| [docs/PREDICTION-LOG.md](docs/PREDICTION-LOG.md) | How predictions are written, locked, graded and turned into lessons |
+| [docs/FAQ.md](docs/FAQ.md) | Common questions, including "can I run it?" and "does it make money?" |
+| [templates/schema.sql](templates/schema.sql) | Starter Postgres schema that enforces the contract in the database |
 | [images/](images/) | The diagrams from the article |
 
 ## The idea in four pictures
@@ -36,6 +42,22 @@ This is the public pack behind the Lift Off article [*I Gave 11 AI Agents My Tra
 **4. The prediction gets locked first.** Every trade is graded against what was said *before* entry, and misses become lessons the desk must read.
 ![Prediction loop](images/05-prediction-loop.png)
 
+## How it's wired
+
+```mermaid
+flowchart LR
+    IN["Market data · social · video<br/>research packs · web"] --> DESK["11 agents<br/>(Grok Bot)"]
+    DESK <--> DB[("Postgres<br/>system of record")]
+    DB --> DASH["Dashboard"] & TG["Telegram"]
+    TV["TradingView alerts"] --> DB
+    DESK -.->|"draft only"| BR["Broker"]
+    H(("Human")) ==>|"approve plan"| DB
+    H ==>|"fire order"| BR
+    DASH & TG --> H
+```
+
+Thick arrows are human-only. Full diagrams: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). Every tool and source: [docs/CONNECTORS.md](docs/CONNECTORS.md).
+
 ## The principles
 
 1. **Agents prepare, humans commit.** Three decisions stay human: approving the plan, firing an order, and changing capital or risk.
@@ -49,7 +71,7 @@ This is the public pack behind the Lift Off article [*I Gave 11 AI Agents My Tra
 1. Copy [`templates/ROSTER.template.md`](templates/ROSTER.template.md) and name your agents.
 2. Write one [`AGENT.template.md`](templates/AGENT.template.md) card per agent.
 3. Fill in [`CONTRACT.template.md`](templates/CONTRACT.template.md). Start with the irreversible action and make it human-only.
-4. Give every agent the contract as a standing instruction, and a database as the single system of record.
+4. Give every agent the contract as a standing instruction, and a database as the single system of record. [`templates/schema.sql`](templates/schema.sql) is a starting point that enforces the hard rules in the database.
 
 The pattern is model- and platform-agnostic. TradeOps currently runs on Grok Bot, with a Postgres database, a live dashboard, TradingView alerts and Telegram notifications.
 
