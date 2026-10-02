@@ -24,6 +24,7 @@ This is the public pack behind the Lift Off article [*I Gave 11 AI Agents My Tra
 | [docs/CONNECTORS.md](docs/CONNECTORS.md) | Every MCP connector and data source, who uses it, and how far it's trusted |
 | [docs/CADENCE.md](docs/CADENCE.md) | Who runs when, from 03:35 PT to the weekend BUILD |
 | [docs/PREDICTION-LOG.md](docs/PREDICTION-LOG.md) | How predictions are written, locked, graded and turned into lessons |
+| [docs/CONCEPTS.md](docs/CONCEPTS.md) | The AI concepts behind the design (sycophancy, statelessness, handoffs, human-in-the-loop) and the rule each one produced |
 | [docs/FAQ.md](docs/FAQ.md) | Common questions, including "can I run it?" and "does it make money?" |
 | [templates/schema.sql](templates/schema.sql) | Starter Postgres schema that enforces the contract in the database |
 | [images/](images/) | The diagrams from the article |
