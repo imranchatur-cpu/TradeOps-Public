@@ -3,7 +3,9 @@
 -- This is the smallest schema that enforces the CONTRACT in the database itself,
 -- instead of trusting prompts:
 --   * a plan can't go live until a human approves it          (plans.status)
---   * a setup can't be armed without a Red Team Pass          (check constraint)
+--   * a setup can't be armed without a Pass, a locked
+--     prediction and reward-to-risk >= 2                      (check constraint)
+--   * the human's own trades are tagged, not blocked          (setups.entry_source)
 --   * a prediction can't be edited once locked                (trigger)
 --   * a live position can't be deleted by an agent            (trigger)
 --   * notifications are rows; a relay function sends them     (notifications)
@@ -20,7 +22,7 @@ create table if not exists plans (
   id            uuid primary key default gen_random_uuid(),
   week_of       date not null unique,
   status        text not null default 'draft'
-                check (status in ('draft', 'approved', 'closed')),
+                check (status in ('draft', 'approved', 'closed', 'archived')),
   bias          text,
   regime        text,
   risk_config   jsonb not null default '{}'::jsonb,  -- human-only: equity, risk %, max concurrent
@@ -38,26 +40,32 @@ create table if not exists setups (
   ticker              text not null,
   direction           text not null check (direction in ('long', 'short')),
   status              text not null default 'watching'
-                      check (status in ('radar', 'watching', 'armed', 'active', 'closed', 'invalidated')),
+                      check (status in ('radar', 'watching', 'armed', 'active', 'closed', 'invalidated', 'removed')),
   score               numeric,
   entry_low           numeric,
   entry_high          numeric,
   stop                numeric,
   t1                  numeric,
   t2                  numeric,
+  rr_t1               numeric,       -- reward-to-risk to the first target
   arm_condition       text,          -- an observable event: "4H close above 33.75", never "wait for confirmation"
   red_team_verdict    text check (red_team_verdict is null or red_team_verdict in ('pass', 'fail')),
   red_team_note       text,
   expected_outcome    text,          -- the locked prediction
   expected_outcome_at timestamptz,
+  evidence            jsonb not null default '[]'::jsonb,  -- dated log: rejections, re-anchors, news
+  entry_source        text not null default 'system'
+                      check (entry_source in ('system', 'override')),  -- override = the human's own call
   outcome_grade       text check (outcome_grade is null or outcome_grade in ('hit', 'miss', 'partial', 'void')),
   updated_at          timestamptz not null default now(),
   created_at          timestamptz not null default now(),
 
-  -- Contract, enforced: nothing is armed (or live) without a Pass and a locked prediction.
-  constraint armed_requires_pass_and_prediction check (
-    status not in ('armed', 'active')
-    or (red_team_verdict = 'pass' and expected_outcome is not null)
+  -- Contract, enforced: nothing is armed (or goes live through the system) without a
+  -- Pass, a locked prediction and reward-to-risk >= 2. The human's own trades are not
+  -- blocked; they go live tagged entry_source = 'override' and get reviewed instead.
+  constraint armed_requires_pass_prediction_rr check (
+    not (status = 'armed' or (status = 'active' and entry_source = 'system'))
+    or (red_team_verdict = 'pass' and expected_outcome is not null and rr_t1 >= 2)
   )
 );
 
@@ -127,7 +135,9 @@ create index if not exists lessons_active_symbol_idx on lessons (symbol) where a
 create table if not exists notifications (
   id          uuid primary key default gen_random_uuid(),
   channel     text not null default 'telegram',
-  source      text not null,       -- build | update | confirm | alert | manual
+  source      text not null
+              check (source in ('build', 'update', 'confirm', 'scout_alert', 'red_team',
+                                'disarm', 'coach', 'ops_alert', 'manual')),
   message     text not null,
   status      text not null default 'pending' check (status in ('pending', 'sent', 'failed')),
   error       text,

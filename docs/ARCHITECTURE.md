@@ -112,9 +112,10 @@ flowchart LR
     B["BUILD<br/>weekend<br/>Architect + whole team"] --> G{"Human<br/>CONFIRM?"}
     G -->|"no"| B
     G -->|"yes: plan approved"| U["UPDATE<br/>~04:00 PT weekdays<br/>Sentinel + whole team"]
-    U --> S1["Scout 06:45<br/>thin tape"]
-    S1 --> S2["Scout hourly<br/>07:45 → 12:45<br/>full tape + radar"]
-    S2 -->|"ALERT"| RT{{"Red Team<br/>Pass | Fail"}}
+    U --> S2["Scout hourly<br/>06:45 → 12:45<br/>far → approaching → at entry"]
+    S2 -->|"at entry"| W{"Wolf<br/>prediction locked?"}
+    W --> RT{{"Red Team<br/>Pass | Fail"}}
+    S2 -->|"stop risk"| H(("Human"))
     S2 --> C["Coach<br/>after close"]
     C -->|"lessons"| U
     C -->|"Saturday weekly grade"| B
@@ -139,17 +140,18 @@ sequenceDiagram
     participant H as Human
     participant BR as Broker
 
-    SC->>W: arm condition met (observable event, e.g. 4H close above level)
+    SC->>W: arm condition met + evidence package (rejections, options vs snapshot, news)
     Note over SC: never arms itself
     W->>DB: read active lessons for this symbol
     W->>DB: lock expected_outcome (immutable from here)
     W->>RT: verify, 1:1 (no pitch, only setup + lessons)
-    RT-->>W: Pass or Fail
+    RT-->>W: Pass or Fail (7-point checklist)
     alt Fail
         W->>DB: verdict = fail, stays watching
-        W-->>H: Floor summary
+        W-->>H: Telegram names the failed check
     else Pass
-        W->>DB: status = armed
+        W->>DB: verdict = pass
+        W->>DB: status = armed (trigger checks R:R, prediction, Pass)
         W->>QM: stage draft
         QM->>BR: create draft order (not sent)
         DB-->>H: Telegram + dashboard
@@ -160,7 +162,8 @@ sequenceDiagram
 Two details that matter:
 
 1. **The prediction is locked at step 3, before Red Team sees anything.** A database trigger rejects any later edit, so the grade at the end is against what was actually claimed.
-2. **Red Team gets the setup and the lessons, not the argument for it.** It judges the trade fresh.
+2. **Red Team gets the setup, the evidence and the lessons, not the argument for it.** It judges the trade fresh.
+3. **The database has the last word.** The `armed` write fails unless reward-to-risk is at least 2:1, the prediction is locked and the verdict is `pass`.
 
 ---
 
@@ -193,7 +196,7 @@ erDiagram
 
     PLANS {
         date week_of
-        text status "draft | approved"
+        text status "draft | approved | archived"
         text bias
         text gamma_regime
         jsonb risk_config "human-only"
@@ -206,6 +209,7 @@ erDiagram
         text arm_condition "observable event"
         text red_team_verdict "pass | fail"
         text expected_outcome "immutable once set"
+        jsonb evidence "dated log: rejections, re-anchors, news"
         text outcome_grade "hit | miss | partial | void"
     }
     POSITIONS {
@@ -213,6 +217,7 @@ erDiagram
         numeric qty
         numeric avg_price
         text status
+        text entry_source "system | override"
     }
     LESSONS {
         text symbol
@@ -265,5 +270,6 @@ stateDiagram-v2
 | **Notifications are rows, not API calls** | An agent inserts a row; a trigger sends the Telegram message and writes back `sent` or `failed`. Agents need no phone credentials, and a missing message is visible. |
 | **Deterministic execution, probabilistic analysis** | Price alerts fire from an indicator on fixed levels. The model never decides *when* a level is hit. |
 | **Least-privilege connectors** | The broker connector can draft but not send. The dashboard key can read but not write. See [CONNECTORS.md](CONNECTORS.md). |
+| **The human is graded too** | Trades taken outside a Pass are tagged `override`. Coach lists them and the human answers "why" every Saturday. |
 | **Every finish posts a line** | Silent failure was the root cause of every bug in six months ([WHAT-BROKE.md](WHAT-BROKE.md)). Now every agent run ends with a status line in the group chat. |
 | **Deploys are git pushes** | The dashboard is a static site. No agent can deploy it. |

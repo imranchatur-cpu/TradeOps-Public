@@ -18,7 +18,7 @@ This is the public pack behind the Lift Off article [*I Gave 11 AI Agents My Tra
 | [**CONTRACT.md**](CONTRACT.md) | The hard rules: human gates, kill gates, the arm path, locked predictions |
 | [**DESK-pack.pdf**](DESK-pack.pdf) | Both of the above on two shareable pages |
 | [templates/](templates/) | Blank `CONTRACT`, `ROSTER` and agent-card templates to adapt |
-| [docs/WHAT-BROKE.md](docs/WHAT-BROKE.md) | Six months of failures and the single pattern behind them |
+| [docs/WHAT-BROKE.md](docs/WHAT-BROKE.md) | Six months of failures, plus what the redesign review caught, and the single pattern behind them |
 | [docs/BEYOND-TRADING.md](docs/BEYOND-TRADING.md) | The same design mapped to due diligence, procurement, underwriting and more |
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | How it's wired: system, planes, arm path, data model, setup lifecycle (Mermaid diagrams) |
 | [docs/CONNECTORS.md](docs/CONNECTORS.md) | Every MCP connector and data source, who uses it, and how far it's trusted |
@@ -64,8 +64,9 @@ Thick arrows are human-only. Full diagrams: [docs/ARCHITECTURE.md](docs/ARCHITEC
 1. **Agents prepare, humans commit.** Three decisions stay human: approving the plan, firing an order, and changing capital or risk.
 2. **One job per agent.** If an agent's card doesn't fit in five lines, split the agent.
 3. **A dedicated "no" agent.** Red Team returns Pass or Fail, nothing in between, and a Fail stops everything downstream.
-4. **Lock the prediction before acting.** Grade against the claim, not the outcome.
-5. **Make failure loud.** Every bug in six months was a silent failure.
+4. **Lock the prediction before acting.** Grade against the claim, not the outcome. The human's own overrides get graded too.
+5. **Enforce the rules in the database, not just the prompt.** Nothing can be written `armed` without a Pass, a locked prediction and 2:1 reward-to-risk.
+6. **Make failure loud.** Every bug in six months was a silent failure.
 
 ## Build your own
 

@@ -14,7 +14,7 @@ Every tool the desk can reach, what each one is for, who uses it, and how far it
 | **TVRemix MCP** | Headless TradingView data: quotes, OHLCV, multi-timeframe and smart-money structure, screeners, option chains, expected move, earnings, financials, news | Cartographer, Options, Sentinel, Architect | Read-only | Rate budget of 20 calls/min, 200/hr and 1,500/day per key. **Options owns its own queue** so one agent can't starve the rest. Back off on 429. |
 | **TradingView MCP** | Watchlists, symbol data, alerts on the user's own account | Architect, Sentinel, Quartermaster | Read + watchlist sync | Syncs the week's trade-ideas watchlist. It does **not** push chart levels; the human pastes those into the indicator. |
 | **IBKR MCP** (Interactive Brokers) | Contract search, account positions and orders, order *instructions* | Quartermaster | **Draft only** | Creates reviewable order instructions after an armed setup gets a Red Team Pass. It never sends a live order. The human fires. |
-| **X (Twitter) MCP** | Search of posts by cashtag and standing handles | Pulse | Read-only | Output must be structured intel written to the week's context. Sentiment alone is not a signal. |
+| **X (Twitter) MCP** | Search of posts by cashtag and standing handles | Pulse; Scout for news on names approaching entry | Read-only | Output must be structured intel written to the week's context. Sentiment alone is not a signal. |
 | **YouTube transcript MCP** | Transcripts from a short list of market-commentary channels | Video-ingest routine | Read-only | New videos only, no backfill. Written to a table, never straight into a plan. |
 | **OpenRouter: decision model** | A typed decision model (TypeSafe Jev) called through the Decisions API | Scout gate, later Red Team assist, Pulse classification | Call-only | **Gates, classifies, verifies. Never decides.** It is barred from plan synthesis, score maths, zone arithmetic and broker risk. Model version is pinned. |
 | **Vercel MCP** | Dashboard project status, logs, environment | Wolf (inspect) | Read-only in practice | Agents **cannot deploy**. Deploys happen on a git push. |
@@ -52,7 +52,7 @@ Every tool the desk can reach, what each one is for, who uses it, and how far it
 
 1. **Least privilege.** Read-only unless the job needs a write. The broker can only draft.
 2. **Budgets are owned.** A rate-limited source has one owner and one queue.
-3. **No silent fallbacks.** If a source fails, the run says so in its finish line and keeps going with what it has. It never invents the missing number.
+3. **No silent fallbacks.** If a source fails, the run says so in its finish line and keeps going with what it has. It never invents the missing number. A broken connector also sends one ops alert to the human per connector per day: loud, but not a flood.
 4. **Secrets stay server-side.** Telegram, broker and model keys live in function secrets or the platform's connector settings. No agent prompt or repo file contains them.
 5. **Every write lands in the database.** If it isn't in a row, it didn't happen.
 

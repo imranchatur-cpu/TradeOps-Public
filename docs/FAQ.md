@@ -12,6 +12,12 @@ Partly. The difference is *where* the human sits and what the agents must do bef
 **Why a dedicated "no" agent?**
 A desk of agents that all want to be helpful will talk itself into trades. Red Team's only job is to look for the reason not to, and it can only answer Pass or Fail. A Fail stops everything downstream. It doesn't see how the trade was pitched, only the setup and the lessons from past misses.
 
+**What if you want to take a trade the desk didn't pass?**
+I can. Nothing blocks me. But the trade is tagged `override`, and every Saturday the desk lists my overrides and asks me why. My answers sit in the record next to the agents' grades. The agents get graded against their predictions; it seemed fair that I do too.
+
+**Doesn't Red Team slow everything down?**
+No, because it only runs when it matters. During market hours Scout checks names in stages: cheap checks when a name is far from entry, options and news when it gets close, and a rejection count at the entry itself. Only a name actually at its entry goes to Red Team. A warning that an open trade is near its stop comes straight to me.
+
 **What platform does it run on?**
 Grok Bot today, with eleven agents under a chief-of-staff agent. It started on Claude and moved over; the design docs carried across almost unchanged. State lives in Postgres (Supabase), the dashboard is a static site on Vercel, alerts come from a TradingView indicator, and notifications go to Telegram. Full list: [CONNECTORS.md](CONNECTORS.md).
 

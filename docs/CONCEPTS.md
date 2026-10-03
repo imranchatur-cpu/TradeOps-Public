@@ -53,9 +53,9 @@ Term names and definitions follow Matt Pocock's **[Dictionary of AI Coding](http
 | [AFK](https://github.com/mattpocock/dictionary-of-ai-coding#afk) | The overnight and premarket runs happen while I'm asleep. Ambiguity is settled up front instead: the plan is approved before any weekday run is allowed to start. |
 | [Software factory](https://github.com/mattpocock/dictionary-of-ai-coding#software-factory) | Schedules and alerts start the runs, not me. That's what lets a desk run from 03:35. |
 | [Dark factory](https://github.com/mattpocock/dictionary-of-ai-coding#dark-factory) | What TradeOps refuses to be. Nothing reaches money without a human reading it, and the one time plans ran without approval (6 of 11 weeks) is written up as a failure in [WHAT-BROKE.md](WHAT-BROKE.md). |
-| [Automated check](https://github.com/mattpocock/dictionary-of-ai-coding#automated-check) | The database's constraints and triggers: nothing arms without a Pass and a locked prediction, and a locked prediction can't be edited ([schema.sql](../templates/schema.sql)). |
+| [Automated check](https://github.com/mattpocock/dictionary-of-ai-coding#automated-check) | The database's constraints and triggers: nothing arms without a Pass, a locked prediction and reward-to-risk of at least 2:1, and a locked prediction can't be edited ([schema.sql](../templates/schema.sql)). |
 | [Automated review](https://github.com/mattpocock/dictionary-of-ai-coding#automated-review) | Red Team. It reviews with a fresh context: it gets the setup and the lessons, never the pitch, so it isn't reading the planner's reasoning back as proof. |
-| [Human review](https://github.com/mattpocock/dictionary-of-ai-coding#human-review) | Kept for the step that can't be undone: the order. |
+| [Human review](https://github.com/mattpocock/dictionary-of-ai-coding#human-review) | Kept for the step that can't be undone: the order. And it runs both ways: trades the human takes outside a Pass are tagged as overrides, and the human explains each one on Saturday. |
 
 ---
 

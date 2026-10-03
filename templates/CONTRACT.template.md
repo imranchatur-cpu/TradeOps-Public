@@ -32,18 +32,24 @@
 - Once written, it's frozen. Grade HIT / MISS / PARTIAL / VOID against it.
 - Misses become lessons, which <planner> and Red Team must read before their next call.
 
-## 5. Communication
+## 5. Human overrides
+
+- The human can act outside the path. It's tagged `override`, never blocked.
+- <Reviewer agent> lists every override each <week> and the human records why. The answers are graded like any other claim.
+
+## 6. Communication
 
 - Every agent posts a one-line finish: `[Agent] [mode] status · deltas · blocker`. No silent finishes.
 - One summary notification to the human per run, with delivery confirmed.
 
-## 6. Data discipline
+## 7. Data discipline
 
 - <One owner per rate-limited source>
 - The <database / system of record> is the truth. If it isn't there, it didn't happen.
 - Failures are logged and reported, never swallowed.
+- Enforce the promotion rule in the database where you can, so a skipped step is an error, not a quiet success.
 
-## 7. Never
+## 8. Never
 
 - <Execute the irreversible action>
 - <Approve a plan>

@@ -22,3 +22,15 @@ The same pattern turned up again while redesigning the dashboard.
 | **Deploys** | A dashboard release was blocked because the commit came from a work email the host didn't recognise. | One identity for every commit |
 
 Two of the three were silent. The loud one, the blocked deploy, was found and fixed in minutes.
+
+## Caught in the redesign review
+
+Before publishing, the chief-of-staff agent reviewed the redesign line by line. It found three more of the same kind.
+
+| Area | What happened | Fix |
+|------|---------------|-----|
+| **The arm rule** | The public schema refused to arm a setup without a Red Team Pass. The live database didn't: it checked reward-to-risk and the prediction, but not the verdict. A prompt was the only thing standing between a Fail and an armed trade. | The live trigger now requires `pass` too. A skipped step is an error. |
+| **Weekly rebuild** | Each weekend BUILD deleted the week's setups and wrote them again, which quietly wiped their locked predictions, grades and evidence. | Setups are updated in place, never deleted and re-inserted. Dropped names are marked removed. |
+| **Alert noise** | Every intraday alert called Red Team, including warnings about open trades near their stop. That's a decision about a live trade, not an arm. | Scout checks in stages. Only a name at entry reaches Red Team; stop warnings go straight to the human. |
+
+Same root cause again: nothing errored, so nothing looked wrong.

@@ -53,6 +53,8 @@ Coach grades every closed setup against the claim, not the P&L.
 
 A profitable MISS is still a MISS. A losing HIT (right call, bad execution) sends the lesson to execution, not to the thesis.
 
+**Override trades are graded too.** A trade the human took without a Pass is tagged `override`. Coach lists them on Saturday, the human answers why, and the answer is graded like any other claim. If the human keeps overriding the same way and losing, that becomes a lesson Red Team checks next time (check 5 in [CONTRACT.md](../CONTRACT.md) §3).
+
 ## 4. Writing the lesson
 
 Not every grade needs a lesson. A lesson is written when a miss (or a lucky hit) teaches something that should change the next decision.
@@ -72,7 +74,7 @@ Not every grade needs a lesson. A lesson is written when a miss (or a lucky hit)
 ## 5. Using it
 
 - **The planner reads active lessons before building next week's plan.** A setup that matches a lesson has to say how it's different this time.
-- **Red Team reads active lessons before every Pass or Fail.** It's the only history Red Team sees. It never sees the pitch.
+- **Red Team reads active lessons before every Pass or Fail.** Lessons and the setup's own evidence log are the only history Red Team sees. It never sees the pitch.
 - **Lessons are archived, not deleted,** so you can see what the desk used to believe.
 
 ## Why it matters outside trading
