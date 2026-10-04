@@ -26,16 +26,21 @@ Every tool the desk can reach, what each one is for, who uses it, and how far it
 |--------|------------------|----------------|
 | **Paid community research** | Zone document, weekly stock-market report (regime, gamma side, momentum), daily/weekly/monthly expected-move levels, watchlists | Archivist reads the community's Discord channels each morning and uploads the packs to file storage. No Discord API: it runs as a browser session. |
 | **Web search** | News, macro and earnings calendar, VIX, put/call, sector moves | Called inside research steps; cited in the plan |
-| **Public quote endpoint** | OHLC bars for the dashboard charts | The `bars` edge function fetches, caches in the database, and serves stale data rather than nothing if the upstream fails |
-| **TradingView indicator** | Real-time ENTRY / STOP / T1 / T2 / gamma-flip alerts on the pasted levels | Alert webhook → `tv-webhook` edge function → database → Telegram |
+| **Yahoo Finance** (public chart endpoint, no key) | Live prices, 1-minute, hourly, daily and weekly OHLC bars | Two edge functions only, never an agent: `bars` (dashboard charts, cached in the database, serves stale data rather than nothing if Yahoo fails) and `scout-far` (the 5-minute entry check). Free data can lag a few minutes, so it notices levels; it doesn't do analysis. |
+| **TradingView indicator** | Real-time ENTRY / STOP / T1 / T2 / gamma-flip / IN ZONE alerts on the pasted levels | Alert webhook → `tv-webhook` edge function → database → Telegram. Alerts are set by hand, so they're a bonus path, not the plan. |
+| **Grok Bot webhook routine** | A routine with a webhook trigger that wakes Scout for one setup | Called by `scout-far` or `tv-webhook` when a watching setup reaches its zone. Runs Scout's checks, Wolf and Red Team in one run. Key held in function secrets. |
+| **Claude Code (`grok-floor` mod)** | A read-out of the agents' group chat outside Grok | Every Floor post is mirrored to a `floor_events` table. The human's Claude Code session reads it and can post advisory notes back, which Wolf relays. Advisory only: a human gate counts only when the human types it in the Floor itself. |
+| **Scheduler (`pg_cron` + `pg_net`)** | Timed calls from inside the database | Runs `scout-far` every 5 minutes in market hours. Makes no call at all until its secret is set, so a half-finished setup doesn't error every 5 minutes. |
 
 ## Edge functions (deterministic code, not agents)
 
 | Function | Trigger | Job |
 |----------|---------|-----|
-| `tv-webhook` | TradingView alert | Parse the alert, record it, promote `armed → active` on entry or `active → closed` on stop, update the live gamma regime, send a Telegram message |
+| `tv-webhook` | TradingView alert | Parse the alert, record it, promote `armed → active` on entry or `active → closed` on stop, update the live gamma regime, send a Telegram message. An ENTRY / IN ZONE alert on a **watching** setup also wakes Scout. |
+| `scout-far` | Scheduler, every 5 min, weekdays 06:00–13:00 PT | Pull Yahoo Finance prices and the 1-minute bars since the last check for every watching setup. If price reached the entry zone, call the Grok Bot wake routine (once per setup per stage per hour, logged in `scout_wakes`). If it's only getting close, record that on the setup for the hourly slot. One Telegram line per run, only if it woke someone. A dry-run mode shows what it would do without writing anything. |
 | `notify` | Database trigger on a new `notifications` row | Relay the message to Telegram and stamp `sent` or `failed` back on the row |
-| `bars` | Dashboard request | Serve cached OHLC bars, refreshing when stale, for an allow-listed set of tickers |
+| `bars` | Dashboard request | Serve cached OHLC bars from Yahoo Finance, refreshing when stale, for an allow-listed set of tickers |
+| Shared wake helper | Imported by `tv-webhook` and `scout-far` | One place for the wake call, the hourly dedupe and the once-a-day ops alert, so both triggers behave the same. Covered by tests that run before every deploy. |
 
 ## Retired, and why
 
@@ -64,6 +69,7 @@ You don't need all of this. To run the pattern on any desk:
 |------|---------------|----------------------|
 | A system of record | Supabase (Postgres) | Any database with row-level permissions |
 | Domain data | TVRemix, TradingView | Your CRM, ERP, document store, APIs |
+| A cheap, dumb watcher | A 5-minute Yahoo Finance price check | Any scheduled job that notices an event and wakes an agent: a new ticket, a filed document, a threshold crossed |
 | A place to stage, not commit, the irreversible action | IBKR order instructions | Draft PO, draft email, draft contract, pull request |
 | A push channel to the human | Telegram via a database trigger | Slack, SMS, email |
 | A room for the agents | Grok Bot group chat | Any chat the agents can post to |

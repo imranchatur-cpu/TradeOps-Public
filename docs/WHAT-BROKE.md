@@ -34,3 +34,14 @@ Before publishing, the chief-of-staff agent reviewed the redesign line by line. 
 | **Alert noise** | Every intraday alert called Red Team, including warnings about open trades near their stop. That's a decision about a live trade, not an arm. | Scout checks in stages. Only a name at entry reaches Red Team; stop warnings go straight to the human. |
 
 Same root cause again: nothing errored, so nothing looked wrong.
+
+## Caught in the instant-wake review
+
+Adding the 5-minute wake, the chief-of-staff agent reviewed the change before it went live. Two more of the same kind.
+
+| Area | What happened | Fix |
+|------|---------------|-----|
+| **Predictions** | When a name reached entry with no prediction on record, the first draft had the wake routine write one on the spot. That passes the arm rule without predicting anything. | No locked prediction means no Red Team. The routine stops and tells the human. |
+| **Retries** | A setup was marked "at entry" before its wake was confirmed. If the wake failed, the 5-minute check saw the name as already handled and never tried again. | A setup is marked only once its wake is delivered. A failed wake sends one ops alert a day, and the next hourly slot picks the name up. |
+
+Same root cause: both would have failed quietly.

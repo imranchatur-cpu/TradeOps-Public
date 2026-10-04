@@ -72,6 +72,19 @@ During market hours Scout spends effort in proportion to how close a name is to 
 
 Only a name **at entry** reaches Red Team, through the chief of staff. Nothing else is triggered: no extra analysts and no re-scans mid-session. Catch-up runs must not trigger Red Team again for a setup it has already ruled on.
 
+### Intraday: instant wake
+
+Scout's hourly slots are the safety net, not the only trigger. A small function checks every watching setup against live prices **every 5 minutes** (weekdays 06:00 to 13:00 PT, from Yahoo Finance). When price reaches an entry zone, it calls a webhook routine that runs Scout's at-entry checks, the chief of staff and Red Team in one go, usually within about 5 minutes. A TradingView alert, where the human has set one, reaches the same routine.
+
+| Rule | Detail |
+|------|--------|
+| **Watching setups only** | Armed names already have a Pass. Radar names aren't tradeable yet. |
+| **Reached means reached** | Price is inside the zone now, or any 1-minute bar since the last check traded inside it. "Getting close" is recorded for the next hourly slot; it doesn't wake anyone. |
+| **Once per setup per hour** | One wake per setup per stage per clock hour, shared by both triggers. A failed wake doesn't block a retry. |
+| **No prediction, no Red Team** | If no prediction was locked before price got there, the routine stops and tells the human. It never writes one at entry time just to get past the arm rule. |
+| **Failures are loud** | A failed wake is logged, sends one ops alert a day, and the next hourly slot picks the name up. |
+| **Arming is unchanged** | Only the chief of staff writes `armed`, only on a Pass, and the database still checks. |
+
 A warning that an **open position is near its stop** goes straight to the human. It's a decision about a live trade, not an arm, so Red Team isn't involved.
 
 ## 4. Predictions are locked before entry
@@ -123,6 +136,7 @@ The human can still take any trade. Nothing blocks that. But a trade taken witho
 - Edit a locked prediction
 - Touch the levels of an open position
 - Treat a vague condition as an arm trigger
+- Write a prediction after price has already reached the entry
 
 ---
 

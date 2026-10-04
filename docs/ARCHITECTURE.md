@@ -33,9 +33,10 @@ flowchart LR
 
     subgraph SOR["System of record: Postgres (Supabase)"]
         direction TB
-        DB[("plans · setups · positions<br/>lessons · alerts · context")]
+        DB[("plans · setups · positions<br/>lessons · alerts · context<br/>floor_events · scout_wakes")]
         FILES[("file storage<br/>research packs")]
-        FN["Edge functions<br/>webhook · notify · bars"]
+        FN["Edge functions<br/>tv-webhook · notify · bars<br/>scout-far (5-min price check)"]
+        CRON["Scheduler<br/>pg_cron, every 5 min"]
     end
 
     subgraph OUT["Human surfaces"]
@@ -43,10 +44,12 @@ flowchart LR
         DASH["Dashboard<br/>static site, live updates"]
         TG["Telegram<br/>phone push"]
         FLOOR["Floor<br/>agent group chat"]
+        CC["Claude Code<br/>grok-floor mod (advisory)"]
     end
 
     HUMAN(("Human"))
     TV["TradingView<br/>indicator + alerts"]
+    YF["Yahoo Finance<br/>prices + OHLC bars"]
     BROKER["Broker<br/>IBKR"]
 
     IN --> DESK
@@ -56,8 +59,13 @@ flowchart LR
     DB -->|"notification row"| FN --> TG
     DESK --> FLOOR
     TV -->|"alert webhook"| FN --> DB
+    CRON --> FN
+    YF -->|"prices, bars"| FN
+    FN -->|"wake: price reached entry"| SCOUT
+    FLOOR -->|"mirrored rows"| DB
+    DB -->|"floor_events"| CC
     QM -.->|"draft only"| BROKER
-    DASH & TG & FLOOR --> HUMAN
+    DASH & TG & FLOOR & CC --> HUMAN
     HUMAN ==>|"CONFIRM plan"| DB
     HUMAN ==>|"fire order"| BROKER
     HUMAN ==>|"paste levels"| TV
@@ -68,6 +76,8 @@ flowchart LR
 - Thin arrows are automated. **Thick arrows are human-only.** There are three, and they match the three human decisions in [CONTRACT.md](../CONTRACT.md).
 - The dotted arrow is the closest any agent gets to money: Quartermaster can stage a *draft* order. It cannot send it.
 - Agents never talk to the dashboard or the phone directly. They write a row, and the database does the rest. That gives one place to look when something goes wrong.
+- Code does the watching. Yahoo Finance prices feed two functions: `bars` for the dashboard charts and `scout-far`, which checks every watching setup every 5 minutes and wakes Scout when price reaches an entry. No agent polls prices.
+- The Floor (the agents' group chat) is mirrored row for row into `floor_events`, so the human can follow it from Claude Code. Notes posted from there are advisory; Wolf relays them, and they never count as a human gate.
 
 ---
 
@@ -87,11 +97,14 @@ flowchart TB
     subgraph P3["Execution plane: deterministic + human"]
         D["TradingView indicator<br/>fires alerts on fixed levels"]
         E["Webhook function<br/>parses alert, updates status"]
+        Y["5-min price check<br/>Yahoo Finance vs entry zones"]
         F["Broker<br/>human submits"]
     end
     A -->|"structured writes"| B
     B --> C
     D --> E --> B
+    Y -->|"wake log"| B
+    Y -.->|"wakes Scout"| A
     B -.->|"armed + Pass"| F
 ```
 
@@ -99,7 +112,7 @@ flowchart TB
 |-------|------------------|------------------|---------------|
 | Intelligence | Agents, prompts, skills | Yes, often | Red Team, kill gates, the human CONFIRM |
 | State | Tables, constraints, triggers | Only if the schema is wrong | Check constraints, immutability triggers, guards on deleting live rows |
-| Execution | Price alerts, webhook, broker | Only on bad levels | Levels are pasted by a human; orders are fired by a human |
+| Execution | Price alerts, webhook, 5-min price check, broker | Only on bad levels or a lagging feed | Levels are pasted by a human; orders are fired by a human; a wake only starts checks, it never arms |
 
 The rule that falls out: **anything that has to be exactly right (maths, status changes, money) is code or a constraint, never a prompt.**
 
@@ -114,6 +127,9 @@ flowchart LR
     G -->|"yes: plan approved"| U["UPDATE<br/>~04:00 PT weekdays<br/>Sentinel + whole team"]
     U --> S2["Scout hourly<br/>06:45 → 12:45<br/>far → approaching → at entry"]
     S2 -->|"at entry"| W{"Wolf<br/>prediction locked?"}
+    U --> PX["Price check<br/>every 5 min, 06:00 → 13:00<br/>Yahoo Finance"]
+    PX -->|"reached entry zone"| WK["Instant wake<br/>Scout at-entry checks"]
+    WK --> W
     W --> RT{{"Red Team<br/>Pass | Fail"}}
     S2 -->|"stop risk"| H(("Human"))
     S2 --> C["Coach<br/>after close"]
@@ -167,7 +183,50 @@ Two details that matter:
 
 ---
 
-## 5. The prediction loop
+## 5. Instant wake: price reaches a level between Scout's slots
+
+Scout's hourly slots would miss a name that dips into its zone at 08:10 and leaves by 08:40. So a deterministic check watches prices and wakes the agents only when it matters.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant CR as Scheduler (every 5 min)
+    participant FN as scout-far function
+    participant YF as Yahoo Finance
+    participant DB as Database
+    participant RT as Wake routine (Scout → Wolf → Red Team)
+    participant H as Human
+
+    CR->>FN: run (weekdays 06:00–13:00 PT)
+    FN->>DB: read watching setups (zone, stop, T1, prediction locked?)
+    FN->>YF: live price + 1-minute bars since the last check
+    alt price reached the entry zone
+        FN->>DB: claim wake (once per setup per stage per hour)
+        FN->>RT: webhook: setup, price, zone, prediction_locked
+        alt no locked prediction
+            RT-->>H: "at entry but no prediction locked, not sent to Red Team"
+        else prediction locked
+            RT->>RT: Scout at-entry checks → evidence package
+            RT->>DB: Red Team Pass | Fail (armed only on Pass, DB checks)
+            RT-->>H: Telegram verdict
+        end
+        FN->>DB: wake sent / failed
+    else within reach (1.5 × daily ATR)
+        FN->>DB: proximity = approaching (hourly slot checks it)
+    end
+    Note over FN,DB: A failed wake sends one ops alert a day,<br/>and the next hourly slot treats the name as at entry
+```
+
+| Rule | Why |
+|------|-----|
+| A TradingView ENTRY / IN ZONE alert reaches the same routine | Alerts are set by hand, so most names don't have one. Yahoo is the main path; alerts are a bonus. Both share one hourly dedupe. |
+| Price has to *reach* the zone, judged on 1-minute bars | Entry zones are tight. A quick dip and bounce between two checks still counts. |
+| A setup is marked at entry only once its wake was delivered | Otherwise a failed wake would never be retried. |
+| It's inert until its secrets are set | The scheduler makes no call, the function skips quietly, and the TradingView path skips the wake. Safe to deploy first and switch on later. |
+
+---
+
+## 6. The prediction loop
 
 ```mermaid
 flowchart LR
@@ -182,7 +241,7 @@ Details and the record format: [PREDICTION-LOG.md](PREDICTION-LOG.md).
 
 ---
 
-## 6. Data model (simplified)
+## 7. Data model (simplified)
 
 The tables an agent touches. Column names are simplified; the point is the shape.
 
@@ -193,6 +252,8 @@ erDiagram
     SETUPS ||--o{ ALERTS : "receives"
     SETUPS ||--o{ LESSONS : "teaches"
     PLANS ||--o{ NOTIFICATIONS : "announces"
+    SETUPS ||--o{ SCOUT_WAKES : "wakes Scout"
+    SETUPS }o--|| ASSET_PRICES : "charted from"
 
     PLANS {
         date week_of
@@ -211,6 +272,24 @@ erDiagram
         text expected_outcome "immutable once set"
         jsonb evidence "dated log: rejections, re-anchors, news"
         text outcome_grade "hit | miss | partial | void"
+        text proximity "far | approaching | at_entry"
+    }
+    SCOUT_WAKES {
+        text stage "approaching | at_entry"
+        text trigger "yahoo_timer | tv_alert"
+        timestamptz hour_bucket "one per setup per stage per hour"
+        text status "pending | sent | failed"
+    }
+    ASSET_PRICES {
+        text ticker
+        numeric current_price
+        jsonb bars "daily · weekly · hourly, from Yahoo"
+    }
+    FLOOR_EVENTS {
+        text author
+        text via "grok | mod"
+        text kind "finish | alert | verdict"
+        text body
     }
     POSITIONS {
         text ticker
@@ -238,7 +317,7 @@ erDiagram
 
 ---
 
-## 7. Setup lifecycle
+## 8. Setup lifecycle
 
 ```mermaid
 stateDiagram-v2
@@ -262,13 +341,14 @@ stateDiagram-v2
 
 ---
 
-## 8. Design choices worth stealing
+## 9. Design choices worth stealing
 
 | Choice | Why |
 |--------|-----|
 | **One database is the only source of truth** | Agents disagree. Rows don't. Every agent reads the same state and every failure has one place to look. |
 | **Notifications are rows, not API calls** | An agent inserts a row; a trigger sends the Telegram message and writes back `sent` or `failed`. Agents need no phone credentials, and a missing message is visible. |
-| **Deterministic execution, probabilistic analysis** | Price alerts fire from an indicator on fixed levels. The model never decides *when* a level is hit. |
+| **Deterministic execution, probabilistic analysis** | Price alerts fire from an indicator on fixed levels, and a 5-minute Yahoo Finance check wakes Scout when a zone is reached. The model never decides *when* a level is hit. |
+| **Event-driven agents, with a schedule as the safety net** | Agents run when something happens (price reaches a zone), not just on a clock. The hourly slots still run and pick up anything a failed wake missed. |
 | **Least-privilege connectors** | The broker connector can draft but not send. The dashboard key can read but not write. See [CONNECTORS.md](CONNECTORS.md). |
 | **The human is graded too** | Trades taken outside a Pass are tagged `override`. Coach lists them and the human answers "why" every Saturday. |
 | **Every finish posts a line** | Silent failure was the root cause of every bug in six months ([WHAT-BROKE.md](WHAT-BROKE.md)). Now every agent run ends with a status line in the group chat. |

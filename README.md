@@ -51,6 +51,7 @@ flowchart LR
     DESK <--> DB[("Postgres<br/>system of record")]
     DB --> DASH["Dashboard"] & TG["Telegram"]
     TV["TradingView alerts"] --> DB
+    YF["Yahoo Finance<br/>5-min price check"] -->|"wakes Scout at entry"| DESK
     DESK -.->|"draft only"| BR["Broker"]
     H(("Human")) ==>|"approve plan"| DB
     H ==>|"fire order"| BR
@@ -75,7 +76,7 @@ Thick arrows are human-only. Full diagrams: [docs/ARCHITECTURE.md](docs/ARCHITEC
 3. Fill in [`CONTRACT.template.md`](templates/CONTRACT.template.md). Start with the irreversible action and make it human-only.
 4. Give every agent the contract as a standing instruction, and a database as the single system of record. [`templates/schema.sql`](templates/schema.sql) is a starting point that enforces the hard rules in the database.
 
-The pattern is model- and platform-agnostic. TradeOps currently runs on Grok Bot, with a Postgres database, a live dashboard, TradingView alerts and Telegram notifications.
+The pattern is model- and platform-agnostic. TradeOps currently runs on Grok Bot, with a Postgres database, a live dashboard, Yahoo Finance prices, TradingView alerts and Telegram notifications.
 
 ## What's not here
 

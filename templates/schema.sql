@@ -9,6 +9,7 @@
 --   * a prediction can't be edited once locked                (trigger)
 --   * a live position can't be deleted by an agent            (trigger)
 --   * notifications are rows; a relay function sends them     (notifications)
+--   * a price-reached wake fires at most once per setup/hour  (scout_wakes)
 --
 -- Adapt freely. Rename "setup" to "deal", "PO", "claim", whatever your desk works on.
 -- License: CC BY 4.0 (Imran Chatur / Lift Off)
@@ -57,6 +58,9 @@ create table if not exists setups (
   entry_source        text not null default 'system'
                       check (entry_source in ('system', 'override')),  -- override = the human's own call
   outcome_grade       text check (outcome_grade is null or outcome_grade in ('hit', 'miss', 'partial', 'void')),
+  proximity           text check (proximity is null or proximity in ('far', 'approaching', 'at_entry')),
+  proximity_price     numeric,       -- last price the 5-minute check saw
+  proximity_at        timestamptz,
   updated_at          timestamptz not null default now(),
   created_at          timestamptz not null default now(),
 
@@ -70,6 +74,12 @@ create table if not exists setups (
 );
 
 create index if not exists setups_plan_status_idx on setups (plan_id, status);
+
+-- For a database built from an earlier copy of this file: add the proximity columns.
+alter table setups add column if not exists proximity text
+  check (proximity is null or proximity in ('far', 'approaching', 'at_entry'));
+alter table setups add column if not exists proximity_price numeric;
+alter table setups add column if not exists proximity_at timestamptz;
 
 -- Locked predictions: once expected_outcome is set it can never change.
 create or replace function protect_expected_outcome() returns trigger
@@ -146,6 +156,30 @@ create table if not exists notifications (
 );
 
 -- ---------------------------------------------------------------------------
+-- scout_wakes: one row per attempt to wake an agent because price reached a
+-- setup (5-minute price check or a TradingView alert). The partial unique
+-- index is the dedupe: one live wake per setup, per stage, per clock hour.
+-- A failed wake doesn't block a retry, and the next scheduled run reads
+-- today's failed rows to pick those names up.
+-- ---------------------------------------------------------------------------
+create table if not exists scout_wakes (
+  id          bigint generated always as identity primary key,
+  setup_id    uuid not null references setups(id) on delete cascade,
+  ticker      text not null,
+  stage       text not null check (stage in ('approaching', 'at_entry')),
+  trigger     text not null check (trigger in ('tv_alert', 'yahoo_timer')),
+  price       numeric,
+  hour_bucket timestamptz not null default date_trunc('hour', now()),
+  status      text not null default 'pending' check (status in ('pending', 'sent', 'failed')),
+  error       text,
+  created_at  timestamptz not null default now()
+);
+
+create unique index if not exists scout_wakes_once_per_hour
+  on scout_wakes (setup_id, stage, hour_bucket)
+  where status in ('pending', 'sent');
+
+-- ---------------------------------------------------------------------------
 -- Permissions (Supabase-style). Agents write with the service role, which
 -- bypasses RLS. The dashboard's public key can only read.
 -- ---------------------------------------------------------------------------
@@ -153,6 +187,7 @@ alter table plans          enable row level security;
 alter table setups         enable row level security;
 alter table lessons        enable row level security;
 alter table notifications  enable row level security;   -- no public policy: service role only
+alter table scout_wakes    enable row level security;   -- no public policy: service role only
 
 do $$
 begin

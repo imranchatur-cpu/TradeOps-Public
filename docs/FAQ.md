@@ -18,8 +18,11 @@ I can. Nothing blocks me. But the trade is tagged `override`, and every Saturday
 **Doesn't Red Team slow everything down?**
 No, because it only runs when it matters. During market hours Scout checks names in stages: cheap checks when a name is far from entry, options and news when it gets close, and a rejection count at the entry itself. Only a name actually at its entry goes to Red Team. A warning that an open trade is near its stop comes straight to me.
 
+**What if price hits a level between Scout's hourly checks?**
+A small function checks every watching setup against Yahoo Finance prices every 5 minutes during market hours. If price reached an entry zone, even briefly, it wakes Scout through a webhook routine, and the checks and the Red Team verdict happen in that same run, usually within about 5 minutes. A TradingView alert does the same where I've set one. If no prediction was locked before price got there, it stops and tells me instead of calling Red Team.
+
 **What platform does it run on?**
-Grok Bot today, with eleven agents under a chief-of-staff agent. It started on Claude and moved over; the design docs carried across almost unchanged. State lives in Postgres (Supabase), the dashboard is a static site on Vercel, alerts come from a TradingView indicator, and notifications go to Telegram. Full list: [CONNECTORS.md](CONNECTORS.md).
+Grok Bot today, with eleven agents under a chief-of-staff agent. It started on Claude and moved over; the design docs carried across almost unchanged. State lives in Postgres (Supabase), the dashboard is a static site on Vercel, prices for charts and the 5-minute entry check come from Yahoo Finance, alerts come from a TradingView indicator, and notifications go to Telegram. I follow the agents' group chat from Claude Code through a mirror table. Full list: [CONNECTORS.md](CONNECTORS.md).
 
 **Does it make money?**
 That's not what this repo claims, and I don't publish returns. What it claims is narrower: every trade is graded against a prediction locked before entry, and misses become rules the desk has to read. That's measurable and honest. P&L over a few months is mostly noise.
@@ -28,7 +31,7 @@ That's not what this repo claims, and I don't publish returns. What it claims is
 Plenty. At one point six of eleven weekly plans ran without my approval. Every bug in six months had the same root: something failed silently. The full list is in [WHAT-BROKE.md](WHAT-BROKE.md).
 
 **Why not let a model decide when a price level is hit?**
-Because a price check doesn't need judgement. The TradingView indicator fires alerts on fixed levels and a small function updates the database. Models do analysis; code does anything that has to be exactly right.
+Because a price check doesn't need judgement. The TradingView indicator fires alerts on fixed levels, a 5-minute function compares Yahoo Finance prices with each entry zone, and small functions update the database. The model is only woken once a level is reached. Models do analysis; code does anything that has to be exactly right.
 
 **Does this work outside trading?**
 Yes. Any desk where agents prepare a decision and a person commits it: due diligence, procurement, underwriting, hiring, compliance review. See [BEYOND-TRADING.md](BEYOND-TRADING.md).

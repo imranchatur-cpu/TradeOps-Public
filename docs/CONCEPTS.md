@@ -31,7 +31,7 @@ Term names and definitions follow Matt Pocock's **[Dictionary of AI Coding](http
 
 | Concept | How TradeOps applies it |
 |---------|-------------------------|
-| [Smart zone](https://github.com/mattpocock/dictionary-of-ai-coding#smart-zone) / [Attention degradation](https://github.com/mattpocock/dictionary-of-ai-coding#attention-degradation) | Long runs get sloppy. So work is split into short, scheduled runs (03:35 ingest, 04:00 UPDATE, hourly Scout) instead of one session that runs all day. |
+| [Smart zone](https://github.com/mattpocock/dictionary-of-ai-coding#smart-zone) / [Attention degradation](https://github.com/mattpocock/dictionary-of-ai-coding#attention-degradation) | Long runs get sloppy. So work is split into short, scheduled runs (03:35 ingest, 04:00 UPDATE, hourly Scout, a short wake run when price reaches a level) instead of one session that runs all day. |
 | [Progressive disclosure](https://github.com/mattpocock/dictionary-of-ai-coding#progressive-disclosure) | Agents start from a one-page map and a read order, not the whole manual. The full skill is loaded only when a run actually needs it. |
 | [Context pointer](https://github.com/mattpocock/dictionary-of-ai-coding#context-pointer) | The map says what each doc is for ("hard gates → CONTRACT", "score maths → SCORE"), so an agent knows when it's worth opening. |
 | [AGENTS.md](https://github.com/mattpocock/dictionary-of-ai-coding#agentsmd) | The always-loaded layer: a short map plus [CONTRACT.md](../CONTRACT.md) as a standing instruction for every agent. |
