@@ -45,3 +45,20 @@ Adding the 5-minute wake, the chief-of-staff agent reviewed the change before it
 | **Retries** | A setup was marked "at entry" before its wake was confirmed. If the wake failed, the 5-minute check saw the name as already handled and never tried again. | A setup is marked only once its wake is delivered. A failed wake sends one ops alert a day, and the next hourly slot picks the name up. |
 
 Same root cause: both would have failed quietly.
+
+
+## Caught in the performance review (2026-10)
+
+These are implemented fixes, not claims that every live backend was activated during this public sync.
+
+| Failure mode | Fix in the current build |
+|---|---|
+| Scanner universe silently truncated after 40 tickers | Process all eligible tickers with bounded provider concurrency |
+| Same-session tape or daily cache treated as fresh after it stalled | Quote-age gate; completed-session indicators; explicit code data-health alerts |
+| Overlapping webhook calls and uncertain acceptance invited repeated work | Durable owner claims, stable keys and receiver receipts; reconcile unknown effects |
+| Board refresh repeatedly transferred chart history | Quote-only board reads, table caches, coalesced refresh and lazy charts |
+| Quote writes made old chart frames appear fresh | Independent frame timestamps and refresh leases |
+| Old Red Team decisions inherited a current card's grade | Immutable snapshots and matching revision outcomes; exclude unversioned accuracy |
+
+Historical descriptions above explain the earlier failures. Current delivery retry behavior,
+including parked uncertainty, is in [ARCHITECTURE](ARCHITECTURE.md#5-monitoring-and-durable-delivery).
