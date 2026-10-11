@@ -1,56 +1,59 @@
 # The desk: 11 agents, one job each
 
-TradeOps runs as an org chart, not a single prompt. Every agent has one job, a short list of things it may do, and a hard list of things it may not. Everything routes through a chief of staff, and the human keeps the trigger.
+Public design refreshed 2026-10-11. A video-ingest routine feeds the desk; it is not an additional
+decision-making role. Wolf owns coordination and arming, specialists own evidence and judgment,
+and the human approves the plan and submits orders.
 
-![The desk](images/02-org-chart.png)
+## Seats and workers
 
-## How the desk is organized
+The intended Floor seats are **Wolf and Quartermaster**. Everyone else is a worker with a narrow
+brief and a database finish record. Wolf relays actionable results. Actual platform membership
+must be checked during deployment; it is not established by this file.
 
-- **Floor seats (6).** These agents share a group channel. It's the room where the human talks to the whole desk at once, and where every agent posts a one-line finish note.
-- **Workers (5).** These agents are dispatched one-to-one by the chief of staff. Their results are posted back to the Floor.
-- **The human.** Confirms the weekly plan and fires every live order. No agent can do either.
+| Agent | One job | May | May not |
+|---|---|---|---|
+| Wolf | Coordinate, resolve blockers, own arming | Dispatch, arm after Pass, relay actionable results | Approve plans, submit live orders |
+| Quartermaster | Stage and reconcile broker instructions | Stage the planned-limit draft after an arm | Submit, modify or cancel live orders |
+| Architect | BUILD the weekly plan | Draft, score, size within approved limits, read lessons | Approve its own plan |
+| Sentinel | Full premarket UPDATE | Refresh non-active levels and claims, add names, sync watchlists | Run without approval, change active-position levels |
+| Scout | Intraday tape and evidence | Review woken names, flag entry/promote/stop-risk events | Arm or place orders |
+| Red Team | Attack the trade thesis | Evidence-backed Pass / Wait / Fail, record unblock/recheck conditions | Re-score at arm, use Conditional Pass, arm or order |
+| Coach | Grade decisions and execution | Match grades to immutable thesis revisions, write/archive lessons, review overrides | Rewrite predictions, mix pilot and main results |
+| Cartographer | Describe multi-timeframe structure | Report levels and structure facts | Make the final trade decision |
+| Options | Own options evidence and the rate-limited queue | EM/gamma/flow facts, scripted pulls | Exceed budgets, supply the final verdict |
+| Pulse | News and public X intelligence | Structured, sourced context; materiality labels | Treat sentiment alone as a signal |
+| Archivist | Ingest and archive research | New packs, gated channel reads, remove superseded files | Leave duplicates or invent missing evidence |
 
-## Floor seats
+## Routing
 
-| Agent | Job | May | May not |
-|-------|-----|-----|---------|
-| **Wolf** (chief of staff) | Owns the queue, the handoffs, blockers and escalations, and chairs the Floor | Dispatch any agent, write the `armed` status after a Red Team Pass, escalate to the human | Confirm a plan or place an order |
-| **Sentinel** (morning analyst) | Runs the weekday premarket UPDATE: full intel refresh plus clear price levels. Re-checks every watching setup instead of dropping it. | Add new names, re-level watching setups (keep, re-anchor, cool off, or move to radar, with the reason logged), save a premarket options snapshot, sync the watchlist | Run unattended unless the week's plan is approved, or touch the levels of open positions |
-| **Scout** (floor runner) | Watches the tape during market hours in three stages: **far** from entry (cheap checks), **approaching** (adds options and news), **at entry** (adds a count of rejections at the level) | Send an evidence package to the chief of staff when a name reaches entry; run between slots when the 5-minute price check (or a TradingView alert) says a name has reached its zone; warn the human directly when an open position nears its stop | Arm a setup, call Red Team itself, or place orders |
-| **Quartermaster** (operations) | Drafts and reconciles broker orders | Stage reviewable order drafts after a setup is armed and passed | Send a live order. The human fires. |
-| **Cartographer** (chart reader) | Reads market structure: higher lows for longs, lower highs for shorts, on weekly, daily and 1H | Report structure facts | Give options opinions or make trade calls |
-| **Options** (options analyst) | Handles options flow, expected-move bands and gamma regime, on its own rate-limited queue | Report EM bands, gamma flip, flow | Exceed the data provider's rate budget. It owns that queue so no one else does. |
-
-## Workers
-
-| Agent | Job | May | May not |
-|-------|-----|-----|---------|
-| **Architect** (planner) | Runs the weekend BUILD: reads how last week went, archives it, then scans to a draft weekly plan | Draft setups, score them against a bar that moves with market conditions, size them by condition, read past lessons first | Confirm its own plan. Only the human does that. |
-| **Red Team** (the agent that says no) | Runs a 7-point go / no-go on every setup at the moment it would arm | Return **Pass** or **Fail**. Nothing else. One failed check is a Fail. | Return "conditional", confirm plans, or place orders |
-| **Coach** (performance coach) | Runs end-of-day and weekly reviews, grades each prediction, writes lessons, and lists every trade the human took outside a Pass | Grade outcomes, write or archive lessons, check recorded trades against the broker | Edit a prediction after it's locked |
-| **Pulse** (social intel) | Reads X/Twitter for the week's names and themes | Write structured intel into the week's context | Count vibes as signal. Intel must be structured. |
-| **Archivist** (librarian) | Ingests community channels and research packs every morning, and archives each finished week | Upload packs, clean up superseded files, archive last week before the new BUILD | Leave orphaned or duplicate files behind |
-
-## The three worth calling out
-
-1. **Red Team.** Its only output is Pass or Fail, from a fixed 7-point checklist (see [CONTRACT.md](CONTRACT.md) §3). A Fail blocks the arm *and* blocks order staging. It reads past lessons on the name before it rules.
-2. **Coach.** It grades every trade against a prediction that was locked *before* entry. Real misses become lessons that Architect and Red Team must read next time. It also grades the human: every trade taken outside a Pass is tagged as an override, and on Saturday the human is asked why.
-3. **Wolf.** The only agent allowed to write `armed`, and only after a Pass. Everything else reports to Wolf instead of acting on its own.
+```mermaid
+flowchart TB
+    H[Human] --> W[Wolf]
+    W --> P[Architect / Sentinel]
+    W --> E[Cartographer / Options / Pulse / Archivist]
+    C[Code gates + fresh tape] --> RT[Red Team: thesis attack]
+    S[Scout: woken slot evidence] --> RT
+    RT -->|Pass or blocker| W
+    W -->|armed after Pass| Q[Quartermaster: draft]
+    Q -->|reviewable instruction| H
+    G[Coach: revision grades + lessons] --> P
+    G --> RT
+```
 
 ## A day on the desk (Pacific time)
 
-| Time | Who | What |
-|------|-----|------|
-| ~03:35 to 03:40 | Archivist, plus a video-ingest routine | Pull overnight research into the week's context |
-| ~04:00 | Sentinel (+ Cartographer, Options, Pulse) | Full premarket UPDATE: levels, new names, watchlist sync, one phone notification |
-| 06:00 to 13:00, every 5 min | Price-check function (code, not an agent) | Checks every watching setup against Yahoo Finance prices. A name that reaches its entry zone wakes Scout right away; the at-entry checks, Wolf and Red Team run in the same routine. |
-| 06:45 to 12:45 hourly | Scout | Staged tape checks: far → approaching → at entry. A name at entry goes to Wolf with its evidence; Wolf checks the prediction is locked and calls Red Team (Pass/Fail only). Stop-risk warnings go straight to the human. |
-| After close | Coach | Grade the day against locked predictions and write lessons |
-| Saturday | Coach, then Wolf | Weekly grade. Wolf asks the human "why" for each override trade; the answers go back to Coach. |
-| Weekend | Archivist, then Architect (whole team) | Archive last week, then BUILD next week's plan. It waits for the human to CONFIRM. |
+| Time | Work |
+|---|---|
+| ~03:35 / ~03:40 | New video transcripts and gated research ingest |
+| ~04:00 | Sentinel's full approved-plan UPDATE with specialists |
+| ~06:35 | Consolidated scripted options pull in the intended cadence |
+| 06:00–13:00, every 5 min | Code checks fresh tape; gated pre-entry/entry/Wait recheck wakes |
+| :44 → :45, 06:45–12:45 | Code decides each Scout slot; Grok runs only when there is work |
+| :52 | Code decides whether a catch-up is needed; no duplicate slot processing |
+| ~10:15 | Gated Pulse material-news check |
+| ~13:13 | Coach EOD review |
+| Saturday | Coach weekly review; Wolf asks why for overrides |
+| Weekend, when enabled | Archive and BUILD; human CONFIRM required |
 
-Every agent posts a compact finish line to the Floor (`[Agent] [mode] status · deltas · blocker`). No silent finishes.
-
----
-
-The rules every agent follows are in [CONTRACT.md](CONTRACT.md). To build your own desk, start from [templates/](templates/).
+Market-calendar code handles holidays and half-day closes. Routine enablement is deployment state,
+not implied by this schedule. Details: [CADENCE](docs/CADENCE.md), [CONTRACT](CONTRACT.md).

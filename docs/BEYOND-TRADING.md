@@ -5,7 +5,7 @@
 | In TradeOps | On your desk |
 |-------------|--------------|
 | **Wolf, chief of staff**: routes work, owns handoffs | PMO / operations lead |
-| **Red Team**: Pass/Fail before anything goes live | Risk, legal and compliance review |
+| **Red Team**: Pass/Wait/Fail before anything goes live | Risk, legal and compliance review |
 | **Locked prediction + Coach**: grade against what you said would happen | Decision log, plus post-mortems that feed the next call |
 | **Database as system of record**: one place for every plan, setup and lesson | CRM, ERP or data warehouse |
 | **Human gates**: approve, fire, change risk | Delegation-of-authority matrix |

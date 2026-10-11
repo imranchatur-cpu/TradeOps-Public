@@ -6,6 +6,8 @@
 
 This is the public pack behind the Lift Off article [*I Gave 11 AI Agents My Trading Desk. None of Them Can Place a Trade.*](https://liftoffai.substack.com). It contains the agent roster, the hard rules every agent follows, and templates to build the same pattern for your own desk, trading or not.
 
+**Public build refresh: 2026-10-11.** Current design: thesis-attack Red Team, code-gated wakes, durable delivery, independent chart freshness and revision-based grading. See [BUILD.md](docs/BUILD.md) for changes, publishing rules and deployment limits.
+
 > Not financial advice. Nothing here places trades. See [DISCLAIMER.md](DISCLAIMER.md).
 
 ---
@@ -16,6 +18,7 @@ This is the public pack behind the Lift Off article [*I Gave 11 AI Agents My Tra
 |------|------------|
 | [**ROSTER.md**](ROSTER.md) | The 11 agents: one job each, what each may and may not do, and a day on the desk |
 | [**CONTRACT.md**](CONTRACT.md) | The hard rules: human gates, kill gates, the arm path, locked predictions |
+| [docs/BUILD.md](docs/BUILD.md) | Current build, activation limits and public publishing boundary |
 | [**DESK-pack.pdf**](DESK-pack.pdf) | Both of the above on two shareable pages |
 | [templates/](templates/) | Blank `CONTRACT`, `ROSTER` and agent-card templates to adapt |
 | [docs/WHAT-BROKE.md](docs/WHAT-BROKE.md) | Six months of failures, plus what the redesign review caught, and the single pattern behind them |
@@ -29,19 +32,13 @@ This is the public pack behind the Lift Off article [*I Gave 11 AI Agents My Tra
 | [templates/schema.sql](templates/schema.sql) | Starter Postgres schema that enforces the contract in the database |
 | [images/](images/) | The diagrams from the article |
 
-## The idea in four pictures
+## The design
 
-**1. From a chat window to a closed loop.**
-![v1 to v2](images/01-v1-v2.png)
+Agents research and challenge. Code owns exact math, freshness and scheduling gates. The database
+preserves decisions and outcomes. Humans approve plans and submit live orders.
 
-**2. An org chart, not a prompt.** One job per agent, and everything routes through a chief of staff.
-![Org chart](images/02-org-chart.png)
-
-**3. No single agent can arm a trade. None can fire one.** The most valuable agent is the one that says no.
-![Arm path](images/03-arm-path.png)
-
-**4. The prediction gets locked first.** Every trade is graded against what was said *before* entry, and misses become lessons the desk must read.
-![Prediction loop](images/05-prediction-loop.png)
+Current diagrams: [ARCHITECTURE](docs/ARCHITECTURE.md). The original [article illustrations](images/)
+remain historical assets; they may show older seats, routes or binary verdicts.
 
 ## How it's wired
 
@@ -51,7 +48,7 @@ flowchart LR
     DESK <--> DB[("Postgres<br/>system of record")]
     DB --> DASH["Dashboard"] & TG["Telegram"]
     TV["TradingView alerts"] --> DB
-    YF["Yahoo Finance<br/>5-min price check"] -->|"wakes Scout at entry"| DESK
+    YF["Yahoo Finance<br/>5-min price check"] -->|"fresh-data gates + durable Red Team / Scout wakes"| DESK
     DESK -.->|"draft only"| BR["Broker"]
     H(("Human")) ==>|"approve plan"| DB
     H ==>|"fire order"| BR
@@ -64,8 +61,8 @@ Thick arrows are human-only. Full diagrams: [docs/ARCHITECTURE.md](docs/ARCHITEC
 
 1. **Agents prepare, humans commit.** Three decisions stay human: approving the plan, firing an order, and changing capital or risk.
 2. **One job per agent.** If an agent's card doesn't fit in five lines, split the agent.
-3. **A dedicated "no" agent.** Red Team returns Pass or Fail, nothing in between, and a Fail stops everything downstream.
-4. **Lock the prediction before acting.** Grade against the claim, not the outcome. The human's own overrides get graded too.
+3. **A dedicated "no" agent.** Red Team attacks the thesis and returns Pass, Wait or Fail. Wait and Fail both block arming; code owns numeric gates.
+4. **Lock the prediction before acting.** Grade the outcome against the recorded claim and revision, never a rewritten current card. The human's own overrides get graded too.
 5. **Enforce the rules in the database, not just the prompt.** Nothing can be written `armed` without a Pass, a locked prediction and 2:1 reward-to-risk.
 6. **Make failure loud.** Every bug in six months was a silent failure.
 
@@ -74,7 +71,7 @@ Thick arrows are human-only. Full diagrams: [docs/ARCHITECTURE.md](docs/ARCHITEC
 1. Copy [`templates/ROSTER.template.md`](templates/ROSTER.template.md) and name your agents.
 2. Write one [`AGENT.template.md`](templates/AGENT.template.md) card per agent.
 3. Fill in [`CONTRACT.template.md`](templates/CONTRACT.template.md). Start with the irreversible action and make it human-only.
-4. Give every agent the contract as a standing instruction, and a database as the single system of record. [`templates/schema.sql`](templates/schema.sql) is a starting point that enforces the hard rules in the database.
+4. Give each agent a short shared core and role card; keep the full contract as an authoritative reference. Use a database as the system of record. [`templates/schema.sql`](templates/schema.sql) is a starting point that enforces the hard rules in the database.
 
 The pattern is model- and platform-agnostic. TradeOps currently runs on Grok Bot, with a Postgres database, a live dashboard, Yahoo Finance prices, TradingView alerts and Telegram notifications.
 

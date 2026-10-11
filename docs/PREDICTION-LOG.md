@@ -10,12 +10,12 @@ Without it, an AI desk grades itself on outcomes. A winning trade "was right" ev
 
 ```mermaid
 flowchart LR
-    A["Arm condition met"] --> B["Wolf writes<br/>expected_outcome"]
+    A["BUILD / UPDATE"] --> B["Preregister<br/>expected_outcome"]
     B --> C["Database locks it<br/>(trigger)"]
-    C --> D["Red Team<br/>Pass | Fail"]
+    C --> D["Red Team<br/>Pass / Wait / Fail"]
     D -->|"Pass"| E["Armed → human fires"]
     E --> F["Trade plays out"]
-    F --> G["Coach grades<br/>vs the locked claim"]
+    F --> G["Coach grades<br/>matching thesis revision"]
     G --> H["Lesson written<br/>(if it teaches something)"]
     H --> I["Next BUILD and<br/>every Red Team check<br/>must read it"]
     I -.-> A
@@ -38,7 +38,15 @@ A good `expected_outcome` is a claim someone else could grade without asking you
 
 ## 2. Locking it
 
-The lock is in the database, not in a prompt. Once `expected_outcome` is set, an update trigger rejects any change, from any agent or the human. See [`templates/schema.sql`](../templates/schema.sql), which also refuses to arm a setup without a Pass and a locked prediction.
+Production distinguishes a current card from its recorded decisions. A non-active level re-cut
+can write a new claim in the same update and preserve the old claim in history; active claims stay
+locked. Red Team captures an immutable thesis/levels/verdict snapshot, and grades attach to that
+exact revision. The current card cannot rewrite the old decision or lend it a newer grade.
+
+Legacy evidence without a trustworthy revision is excluded from accuracy. The
+[starter schema](../templates/schema.sql) intentionally demonstrates a stricter one-claim-per-row
+lock; represent a re-cut with a separate row in that template. It does not implement the full
+production snapshot/grade workflow. See [architecture](ARCHITECTURE.md#6-the-prediction-loop).
 
 ## 3. Grading
 
@@ -53,7 +61,7 @@ Coach grades every closed setup against the claim, not the P&L.
 
 A profitable MISS is still a MISS. A losing HIT (right call, bad execution) sends the lesson to execution, not to the thesis.
 
-**Override trades are graded too.** A trade the human took without a Pass is tagged `override`. Coach lists them on Saturday, the human answers why, and the answer is graded like any other claim. If the human keeps overriding the same way and losing, that becomes a lesson Red Team checks next time (check 5 in [CONTRACT.md](../CONTRACT.md) §3).
+**Override trades are graded too.** A trade the human took without a Pass is tagged `override`. Coach lists them on Saturday, the human answers why, and the answer is graded like any other claim. If the human keeps overriding the same way and losing, that becomes a lesson Red Team checks next time (the thesis review in [CONTRACT.md](../CONTRACT.md) §3).
 
 ## 4. Writing the lesson
 
@@ -74,7 +82,7 @@ Not every grade needs a lesson. A lesson is written when a miss (or a lucky hit)
 ## 5. Using it
 
 - **The planner reads active lessons before building next week's plan.** A setup that matches a lesson has to say how it's different this time.
-- **Red Team reads active lessons before every Pass or Fail.** Lessons and the setup's own evidence log are the only history Red Team sees. It never sees the pitch.
+- **Red Team reads active lessons before every verdict.** It challenges the locked thesis against fresh evidence; the planner's pitch is not proof.
 - **Lessons are archived, not deleted,** so you can see what the desk used to believe.
 
 ## Why it matters outside trading

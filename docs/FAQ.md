@@ -10,7 +10,7 @@ Because the order is the one irreversible step. Agents are very good at preparin
 Partly. The difference is *where* the human sits and what the agents must do before reaching them. A setup reaches the human only after an observable arm condition, a locked prediction and a Red Team Pass. The human makes three decisions (approve the plan, fire the order, change capital or risk) and nothing else is waiting on them.
 
 **Why a dedicated "no" agent?**
-A desk of agents that all want to be helpful will talk itself into trades. Red Team's only job is to look for the reason not to, and it can only answer Pass or Fail. A Fail stops everything downstream. It doesn't see how the trade was pitched, only the setup and the lessons from past misses.
+A desk of agents that all want to be helpful will talk itself into trades. Red Team's only job is to look for the reason not to, and it answers Pass, Wait or Fail. Wait names a specific unresolved print and blocks arming. A Fail stops everything downstream. It challenges the locked thesis against fresh evidence and past lessons; code checks the numbers separately.
 
 **What if you want to take a trade the desk didn't pass?**
 I can. Nothing blocks me. But the trade is tagged `override`, and every Saturday the desk lists my overrides and asks me why. My answers sit in the record next to the agents' grades. The agents get graded against their predictions; it seemed fair that I do too.
@@ -44,3 +44,11 @@ Yes. Any desk where agents prepare a decision and a person commits it: due dilig
 
 **Is this financial advice?**
 No. See [DISCLAIMER.md](../DISCLAIMER.md).
+
+
+**Does this include the new performance build?**
+Yes: the docs describe bounded data fetches, durable delivery/receipts, lazy charts, short core
+context and immutable thesis grading. The PDF is updated too. Article images are historical.
+The private implementation passed 206 tests, but this repository is a sanitized teaching pack,
+not a deployment. Backend activation was not verified here. No token-saving percentage or
+trading return is claimed. New free-source integrations remain proposals. See [BUILD](BUILD.md).

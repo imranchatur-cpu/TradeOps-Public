@@ -1,6 +1,11 @@
 -- TradeOps-style system of record: a minimal starter schema (Postgres / Supabase).
 --
--- This is the smallest schema that enforces the CONTRACT in the database itself,
+-- Public teaching schema, refreshed 2026-10-11. Not a production migration or permission system.
+-- Approval/risk authority needs trusted application roles; approved_by text is not proof of a human.
+-- It omits durable transport/receiver RPCs, revision snapshots/outcomes, chart caches and pilot guards.
+-- For this stricter one-claim-per-row example, a re-cut uses a separate row; old history stays.
+-- Execute only in a new test database; existing constraints are not upgraded by CREATE IF NOT EXISTS.
+-- This demonstrates selected CONTRACT constraints in the database itself,
 -- instead of trusting prompts:
 --   * a plan can't go live until a human approves it          (plans.status)
 --   * a setup can't be armed without a Pass, a locked
@@ -50,7 +55,7 @@ create table if not exists setups (
   t2                  numeric,
   rr_t1               numeric,       -- reward-to-risk to the first target
   arm_condition       text,          -- an observable event: "4H close above 33.75", never "wait for confirmation"
-  red_team_verdict    text check (red_team_verdict is null or red_team_verdict in ('pass', 'fail')),
+  red_team_verdict    text check (red_team_verdict is null or red_team_verdict in ('pass', 'wait', 'fail')),
   red_team_note       text,
   expected_outcome    text,          -- the locked prediction
   expected_outcome_at timestamptz,
@@ -69,7 +74,8 @@ create table if not exists setups (
   -- blocked; they go live tagged entry_source = 'override' and get reviewed instead.
   constraint armed_requires_pass_prediction_rr check (
     not (status = 'armed' or (status = 'active' and entry_source = 'system'))
-    or (red_team_verdict = 'pass' and expected_outcome is not null and rr_t1 >= 2)
+    or (red_team_verdict is not null and red_team_verdict = 'pass'
+        and expected_outcome is not null and rr_t1 is not null and rr_t1 >= 2)
   )
 );
 
@@ -159,8 +165,8 @@ create table if not exists notifications (
 -- scout_wakes: one row per attempt to wake an agent because price reached a
 -- setup (5-minute price check or a TradingView alert). The partial unique
 -- index is the dedupe: one live wake per setup, per stage, per clock hour.
--- A failed wake doesn't block a retry, and the next scheduled run reads
--- today's failed rows to pick those names up.
+-- This legacy starter log is not the current durable transport. It must not drive
+-- blind HTTP retries; implement owner claims, uncertain state and receiver receipts separately.
 -- ---------------------------------------------------------------------------
 create table if not exists scout_wakes (
   id          bigint generated always as identity primary key,

@@ -7,7 +7,8 @@ Give every agent one card. If you can't fill a card in five lines, the agent has
 | **Name** | <Short, memorable. Names make handoffs readable.> |
 | **Seat** | <Floor (shared room) / Worker (1:1 via chief of staff)> |
 | **One job** | <One sentence> |
-| **Runs when** | <Schedule or trigger> |
+| **Runs when** | <Code-gated schedule or stable event key; no-work exit> |
+| **Event handling** | <Claim before work, complete receipt; reconcile interrupted effects> |
 | **Reads** | <Inputs: tables, files, feeds, lessons> |
 | **Writes** | <Outputs: and nothing else> |
 | **May** | <Allowed actions> |

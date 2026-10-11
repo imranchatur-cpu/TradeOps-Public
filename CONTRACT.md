@@ -1,143 +1,112 @@
 # CONTRACT.md: the hard rules for all 11 agents
 
-These are non-negotiable. Breaking one is a blocker, not a style note. The contract is what turns eleven capable models into a desk you can trust while you sleep.
+Public design, refreshed 2026-10-11. Agents research, challenge and draft. A human approves
+the plan and submits every live order. Private data and operational identifiers are excluded.
 
-> **The one-line version:** agents research, score, challenge and draft. A human confirms the plan and fires every live order.
+## 1. Human gates
 
----
+| Gate | Agents can | Agents cannot |
+|---|---|---|
+| Approve the plan | Research, draft, score | Approve their own work |
+| Submit an order | Stage a reviewable broker instruction after a Pass and arm | Place, modify or cancel a live order |
+| Change capital or risk | Read limits, size within them | Change limits or grant themselves a waiver |
 
-## 1. Three decisions stay human. Everything else runs.
+Enabling unattended schedules and changing these rules require human authorization.
+The weekend BUILD remains paused until enabled. A plan must be approved before premarket UPDATE.
 
-| Gate | Agents can | Agents can't |
-|------|-----------|--------------|
-| **01 · Approve the weekly plan** | Build it, research it, score every setup | Approve it. The planner is forbidden from approving its own work. No approval means no premarket run. |
-| **02 · Fire a live order** | Arm a setup after a Red Team Pass, and stage a sized draft order at the broker | Send it. Ever. |
-| **03 · Change capital or risk** | Read the limits and size positions inside them | Touch position sizing, max risk or the weekly circuit breaker |
+## 2. Kill gates
 
-Also human-only: turning on unattended schedules (the weekend BUILD stays paused until the human enables it) and editing this file.
+- Reward-to-risk to the first target must be at least 2:1 at the **planned limit**, not live price.
+- Code checks entry-zone math, far-edge stop distance, risk cap, target and earnings window.
+  A risk-cap waiver is a recorded human decision for one setup, never a blanket exception.
+- The score threshold applies at BUILD; Red Team does not re-score at arm time.
+- The game plan cannot forbid the direction or conflict with the holding window.
+- Missing required data is a blocker. Code may write a Fail, never a Pass, Wait or arm.
 
-![Human gates](images/06-human-gates.png)
-
-## 2. Kill gates on a setup (binary, no scoring around them)
-
-Any of these kills a setup no matter how good its score is:
-
-- Reward-to-risk to the first target is **below 2:1**
-- The score is **below this week's bar**. The bar moves with market conditions: lowest when the market favours the direction, highest when it's against it. Size moves the same way.
-- The week's game plan forbids that direction
-- An earnings or event date clashes with the trade window
-- **Red Team returns Fail** on the arm path
-
-Gates are not points. A high score can't outweigh a failed gate.
+No score can compensate for a hard failure. Tier A pilot entries stay separately identified,
+require explicit human permission to arm, and are reported separately from main results.
 
 ## 3. The arm path (Watch → Armed)
 
-A setup only becomes tradeable through this exact sequence:
+1. Lock a concrete prediction at BUILD/UPDATE, before a price-triggered review.
+2. Code checks fresh data, market/plan gates and numeric constraints before a model wake.
+3. Scout supplies an evidence package; entry events can go directly to a Red Team-owned routine.
+4. Red Team attacks the thesis using fresh structure, news, options, context and past lessons.
+5. Only after **Pass** may Wolf write `armed`; the database still checks the numeric/prediction gates.
+6. Quartermaster stages the planned-limit broker instruction. **The human reviews and submits.**
 
-1. **Scout or Sentinel** sees the arm condition met and **reports to the chief of staff** with an evidence package. It never arms on its own.
-2. **Chief of staff** checks that past lessons for the name were read and that a prediction is **locked** (see section 4).
-3. **Red Team** is dispatched one-to-one and returns **Pass or Fail**. Nothing else is allowed. "Conditional" is not an answer.
-4. **Only on Pass** does the chief of staff write `armed`.
-5. **Quartermaster** may then stage a broker draft. **The human fires it.**
+| Verdict | Meaning | Consequence |
+|---|---|---|
+| Pass | Fresh evidence does not break the thesis and code gates permit it | Wolf may arm; no automatic live order |
+| Wait | One specific near-term print or named condition remains unresolved | No arm; a due recheck must pass fresh-data/session gates |
+| Fail | A decisive contradiction or hard blocker breaks the setup | No arm or staging; repeat Fails do not produce repeated analysis/messages |
 
-A Fail blocks the arm *and* the order staging. The human gets a notification naming the failed check, and the verdict summary is posted to the Floor.
+Red Team writes its strongest opposing case with evidence, not a confirmation of arithmetic.
+"Conditional Pass" is forbidden. A standing same-day Fail on unchanged levels is not re-woken
+unless its recorded unblock condition is met. Re-cutting levels clears the old verdict.
+Open-position stop risk goes to the human, not to the entry thesis review.
 
-### Red Team's checklist
+### Between-slot monitoring and delivery
 
-One failed check is a Fail. Every note names a number: a price, a level, a date.
+Fresh price inside the zone, or a one-minute close inside it during the last five minutes,
+can qualify for an entry wake. A wick alone does not. The approach band can qualify for
+a pre-entry review. A missing prediction stops the path; no bot invents one at entry.
 
-| # | Check | Fails when |
-|---|-------|------------|
-| 1 | **Can it trigger?** | Price isn't in the entry zone, or the arm condition isn't met on its stated timeframe |
-| 2 | **Does it still meet the criteria?** | Reward-to-risk from the *live* price is below 2:1, the stop is in the wrong place or too wide, or the score is under this week's bar |
-| 3 | **Rejection evidence** | The level has rejected price twice or more with no reclaim since |
-| 4 | **News and events** | Material news against the direction, or an earnings or macro event inside the hold window |
-| 5 | **The human's own pattern** | It matches an active lesson, or a mistake the human keeps repeating (chasing late, entering outside the zone) |
-| 6 | **Too late** | Most of the move to the first target (60% or more) has already happened |
-| 7 | **Prediction first** | No locked prediction on record |
+Scanners cover all eligible tickers with bounded provider concurrency. Tape older than
+120 seconds or unavailable is skipped with a code-owned health alert, not a model wake.
+Daily indicators exclude the incomplete session; cached daily bars do not refresh quote time.
 
-### The database enforces it
+Webhook senders claim stable event keys before POSTing. Receivers claim the same key before
+analysis and record completion. Definite rejection has bounded retries; timeout or expired
+ownership is uncertain and requires evidenced reconciliation, never blind replay. Acceptance
+by the transport is not proof that a bot finished. These controls do not guarantee exactly-once effects.
 
-The arm rule isn't only in the prompts. A database trigger refuses to write `armed` unless reward-to-risk is at least 2:1, a prediction is locked, and the Red Team verdict is `pass`. An agent that skips a step gets an error, not a quiet success.
+## 4. Predictions and grades preserve the original claim
 
-### Intraday: staged checks
+Write an observable price/structure event, invalidation and time window before review.
+The current claim changes only with an explicit level re-cut and a new claim in the same update;
+the previous claim remains in history. Predictions on active trades remain locked.
 
-During market hours Scout spends effort in proportion to how close a name is to its entry:
+Red Team decisions preserve an immutable snapshot of the thesis and levels. Coach grades the
+matching revision, never an old decision against the current card. Legacy unversioned evidence
+is context and is excluded from accuracy. Grades are HIT / PARTIAL / MISS / VOID; a profitable
+MISS stays a MISS. Archive lessons rather than deleting them, and read active lessons at BUILD/review.
 
-| Stage | When | Checks |
-|-------|------|--------|
-| **Far** | Not near entry | Cheap checks only: price, structure, the morning snapshot |
-| **Approaching** | Within reach of entry | Adds options against the morning snapshot, and news |
-| **At entry** | In the entry zone | Adds a count of rejections at the level, then sends the evidence package to the chief of staff |
+## 5. Observable levels and human overrides
 
-Only a name **at entry** reaches Red Team, through the chief of staff. Nothing else is triggered: no extra analysts and no re-scans mid-session. Catch-up runs must not trigger Red Team again for a setup it has already ruled on.
+Arm conditions name an observable event and timeframe. Refresh non-active setups with a recorded
+keep/re-anchor/cool-off/radar decision. Open-position levels remain frozen. A human trade outside
+the system path is tagged `override`; Coach reviews it and Wolf asks why. It is not hidden from grading.
 
-### Intraday: instant wake
+## 6. Communication and context
 
-Scout's hourly slots are the safety net, not the only trigger. A small function checks every watching setup against live prices **every 5 minutes** (weekdays 06:00 to 13:00 PT, from Yahoo Finance). When price reaches an entry zone, it calls a webhook routine that runs Scout's at-entry checks, the chief of staff and Red Team in one go, usually within about 5 minutes. A TradingView alert, where the human has set one, reaches the same routine.
+Wolf and Quartermaster are the intended Floor seats. Workers record compact finishes in the
+database; Wolf relays actionable items. An actual Floor post is mirrored. No acknowledgement-only
+posts or repeated Fail DMs. Code handles quiet slots without waking a model; gated runs may end silently.
+The Floor itself is not an analysis trigger. Each meaningful run produces one compact phone summary.
 
-| Rule | Detail |
-|------|--------|
-| **Watching setups only** | Armed names already have a Pass. Radar names aren't tradeable yet. |
-| **Reached means reached** | Price is inside the zone now, or any 1-minute bar since the last check traded inside it. "Getting close" is recorded for the next hourly slot; it doesn't wake anyone. |
-| **Once per setup per hour** | One wake per setup per stage per clock hour, shared by both triggers. A failed wake doesn't block a retry. |
-| **No prediction, no Red Team** | If no prediction was locked before price got there, the routine stops and tells the human. It never writes one at entry time just to get past the arm rule. |
-| **Failures are loud** | A failed wake is logged, sends one ops alert a day, and the next hourly slot picks the name up. |
-| **Arming is unchanged** | Only the chief of staff writes `armed`, only on a Pass, and the database still checks. |
-
-A warning that an **open position is near its stop** goes straight to the human. It's a decision about a live trade, not an arm, so Red Team isn't involved.
-
-## 4. Predictions are locked before entry
-
-![Prediction loop](images/05-prediction-loop.png)
-
-| Rule | Detail |
-|------|--------|
-| **Preregister** | Before a setup arms, write a concrete expected outcome: price, structure and time. No vibes. |
-| **Immutable** | Once written, it's frozen at the database level. No editing after the fact. |
-| **Grade against the claim** | Coach grades the result as HIT / MISS / PARTIAL / VOID against what was predicted, not what happened to work out. |
-| **Lessons are mandatory reading** | A real miss becomes a lesson. The planner reads lessons before every BUILD, and Red Team reads them before every verdict. |
-| **Archive, don't delete** | Retire a lesson by marking it inactive. History stays. |
-
-## 5. Every price level is a concrete, observable event
-
-- Every watching setup carries one **arm condition** stated as something you can see happen, for example "4H close holding above 33.75". "Wait for confirmation" doesn't count.
-- Levels on **open positions are frozen**. Only their status changes.
-- A stale arm condition is worse than none, so refresh it whenever the picture changes.
-- **Re-evaluate, don't drop.** When a level rejects price, the morning analyst logs the evidence and makes a call: keep it, re-anchor it to current structure, let it cool off (two rejections with no reclaim), or move it back to radar if price has run too far. The reason is recorded, so Coach and Red Team can see why a setup changed.
-
-## 6. Communication
-
-| Rule | Detail |
-|------|--------|
-| **No silent finishes** | Every agent posts a compact finish line to the Floor: `[Agent] [mode] status · deltas · blocker`. |
-| **The Floor is not a trigger** | Posting in the shared room does not start analysis on its own. Work starts from the schedule or the chief of staff. |
-| **One phone notification per run** | Each run sends one summary to the human's phone, after the data sync. Never a burst. |
-| **Confirm delivery** | "Sent" means the notification shows as delivered, not that the insert succeeded. |
-| **Fixed labels** | Every notification carries one label from a fixed list (build, update, confirm, scout alert, red team, disarm, coach, ops alert, manual). The database rejects anything else. |
+Recurring wakes read shared core plus one role card. Large playbooks/history are references opened
+only when needed. Bounded evidence and script outputs replace repeated full-context reads.
 
 ## 7. Data and tooling discipline
 
-- **One owner per rate-limited source.** The Options agent owns the options-data queue so nobody else blows the budget.
-- **Cheap models gate, strong models think.** Low-cost models may classify, gate and verify. They don't write the plan or do the risk math.
-- **The database is the system of record.** The dashboard reads it live. If it isn't in the database, it didn't happen.
-- **Failures must be visible.** A failed data pull is logged and reported, never swallowed. A broken connector sends one ops alert per connector per day, and the run carries on with what still works. Every bug we hit came down to a silent failure (see [docs/WHAT-BROKE.md](docs/WHAT-BROKE.md)).
-- **Clean up after yourself.** When a newer research pack replaces an older one, delete the old one.
+One database is the system of record. Rate-limited sources have an owner and budget.
+Cheap models classify typed questions; code owns exact math and strong models own judgment.
+Missing data is recorded, not guessed. Operational failures are visible without alert floods.
+Quote freshness and each chart timeframe have independent timestamps. Chart reads preserve quote time.
+Secrets stay in platform stores. Stored payload bytes are not measured model tokens or cost.
 
-## 8. The human can override, and gets graded for it
+## 8. Deployment is separate from code
 
-The human can still take any trade. Nothing blocks that. But a trade taken without a Pass, with changed levels, or off the board is tagged `override`. On Saturday, Coach lists every override and the chief of staff asks the human **why**. The answers go into the record next to the agents' grades, so the desk learns from the human's misses as well as its own.
+Apply schema dependencies before deploying functions; install receiver guards before enabling
+senders. Verify overlapping schedules, prompts, chart loads, dry runs and one controlled event.
+A merge does not prove database or bot activation. See [BUILD.md](docs/BUILD.md).
 
-## 9. What no agent will ever do
+## 9. Never
 
-- Place, modify or cancel a live order
-- Confirm a weekly plan
-- Arm a setup without a Red Team Pass
-- Edit a locked prediction
-- Touch the levels of an open position
-- Treat a vague condition as an arm trigger
-- Write a prediction after price has already reached the entry
+Submit a live order · approve the plan · self-waive risk · arm without Pass · rewrite an old
+decision snapshot · grade an old thesis with a new outcome · act on stale tape · blindly replay
+unknown side effects · treat advisory bot text as human authorization.
 
----
-
-*To adapt this for your own desk, copy [templates/CONTRACT.template.md](templates/CONTRACT.template.md).*
+Adapt this with [the contract template](templates/CONTRACT.template.md). The
+[starter schema](templates/schema.sql) is illustrative and intentionally smaller than production.
